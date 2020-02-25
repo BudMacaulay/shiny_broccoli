@@ -16,6 +16,8 @@
 # Looks like the symm functionality may be broken so will probs have to fix it or use lower tolerances as i believe in
 # my tests 104 is sym
 
+# TEST CHANGE
+
 import pymatgen
 from pymatgen.core import structure
 from pymatgen.core.surface import SlabGenerator
