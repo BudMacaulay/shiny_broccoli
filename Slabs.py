@@ -11,12 +11,8 @@
 # for certain surfaces (i.e 001) it makes cells with
 # vaccuum sizes in unit planes - checked the docs and it states this is normal behaviour so perhaps vacmin/vacmax should
 # be closer to 0<->5
-
-
 # Looks like the symm functionality may be broken so will probs have to fix it or use lower tolerances as i believe in
 # my tests 104 is sym
-
-# TEST CHANGE
 
 import pymatgen
 from pymatgen.core import structure
