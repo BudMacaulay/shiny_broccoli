@@ -1,14 +1,9 @@
-import datetime
+import itertools
 import json
 import os
-import shutil
-import itertools
-import filecmp
 
 import numpy as np
 from pymatgen import Structure
-from pymatgen.io.vasp.inputs import Poscar
-import ast
 
 # Shouldnt require my shit to be a composition that seems like too much effort, as long as stio it makes sense it will
 # try to
@@ -24,7 +19,7 @@ import ast
 
 
 comppy = input('Enter a desired composition as a list of lists [["Co",4],["Mn",4]] - or a dict maybe ## - not done yet')
-pfile = '/Users/budmacaulay/Desktop/RESUBMIT/s104_9lay/sup121Co4Mnbulksub/POSCAR'
+pfile = '/Users/budmacaulay/Desktop/RESUBMIT/s104_9lay/sup121Co4Nibulksub/POSCAR'
 
 prepresentdefect = input('Is there already a defective site you want to fix (type its formula or its coord)')
 comp = json.loads(comppy)
@@ -62,7 +57,7 @@ if prepresentdefect.startswith('['):
             print('found element @ ' + prepresentdefect + ', fixing its location')
             counter += 1
 
-            ### removing the site to readd it at the end of the transformation cause yeah, super genius.
+            # removing the site to re add it at the end of the transformation cause yeah, super genius.
             obby.remove_sites(fixlist)
     if counter == 0:
         print('no occupancy @ said site are you sure you entered the right fraccord')
@@ -89,8 +84,8 @@ print('a ' + comp[0][0] + ' to total ratio of ' + str(rati) + ' is desired')
 m_1state = obby.composition[comp[0][0]]
 m_2state = obby.composition[comp[1][0]] + counter
 
-# As of current just rounding when it cant reach desired ratio so yeah
-m_1subs = round(rati * m_1state)
+# As of current just rounding when it cant reach desired ratio so yeah make sure your ratio is possible loser.
+m_1subs = round(m_1state - rati * m_1state)
 print('total subs is ' + str(m_1subs))
 
 # Looks like pmg maaay not allow direct multiple transformations, which makes sense since pmg sucks. So here goes my
