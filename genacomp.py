@@ -17,7 +17,6 @@ from pymatgen import Structure
 # NOTE !!!!  - This program seems to be ridicolously ineffective for large systems. A 20 total site 50:50 split makes
 # roughly 20000 files so yeah. Need to some how consider symmetry but not sure how
 
-
 comppy = input('Enter a desired composition as a list of lists [["Co",4],["Mn",4]] - or a dict maybe ## - not done yet')
 pfile = '/Users/budmacaulay/Desktop/RESUBMIT/s104_9lay/sup121Co4Nibulksub/POSCAR'
 
@@ -25,7 +24,6 @@ prepresentdefect = input('Is there already a defective site you want to fix (typ
 comp = json.loads(comppy)
 
 # - - - End the userinp  - - - #
-
 
 # - - - initial stru fix - - - #
 
