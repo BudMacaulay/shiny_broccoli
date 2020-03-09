@@ -6,6 +6,7 @@ from collections import Counter
 import numpy as np
 from pymatgen import Structure
 from statistics import mode
+import shutil
 
 ### Not sure of computer science stuff and thus therefore am unsure of how i should compare a set of numbers iteratively
 ## In terms of memory it seems most ideal to infact do a i and j = i+1 method or something.
@@ -115,3 +116,14 @@ while i < folder - 1:
     j = i + 1
 
 # # # - - - DONE COMPARING SHIT - - - # # #
+
+# Once done it is probs ideal to move said shit into a damn new folder, that way you wont overwrite important shit
+# from here you can use any of the tools to move a json, qscript, kpoints potcar and incar into the directories.
+# Should be pretty cool!
+
+os.makedirs('/Users/budmacaulay/Desktop/newtestssss/removed', exist_ok=True)
+for folder in folderlistnew:
+    os.makedirs('/Users/budmacaulay/Desktop/newtestssss/removed/' + str(folder), exist_ok=True)
+    shutil.copy2('/Users/budmacaulay/Desktop/newtestssss/' + str(folder) + '/POSCAR', '/Users/budmacaulay/Desktop'
+                                                                                      '/newtestssss/removed/' + str(
+        folder))
