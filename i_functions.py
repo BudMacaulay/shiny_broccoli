@@ -1,7 +1,5 @@
 # # # A list of useful functions in my aim to write a more consistant and understandable codebase.
-# # #
-# # #
-# # #
+
 import os
 import shutil
 
