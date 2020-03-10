@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import datetime
 
 
 def possypot(workdir, potcardir):
@@ -28,8 +29,8 @@ def possypot(workdir, potcardir):
                                 outfile.write(line)
 
 
-def possyinc(workdir, initialincarfile):
-    #### Need to change the current handling of these fuckers into a damn json file. As of current i'm just finding
+def pos2inc(workdir, initialincarfile):
+    # Need to change the current handling of these fuckers into a damn json file. As of current i'm just finding
     # parameters that are incar required and adding them by hand
     useratoms = 'Li Ni Mn Co O'.split()
     useratoms_mag = '0.0 1.0 1.0 1.0 0.0'.split()
@@ -112,3 +113,79 @@ def kpointer(workdir, kpointfile):
         for file in files:
             if file.endswith('POSCAR'):
                 shutil.copy2(kpointfile, subdir)
+
+
+def tabluateitall(workdir):
+    import os
+    from operator import itemgetter
+
+    import pandas as pd
+    from pymatgen import Structure
+    from pymatgen.io.vasp.outputs import Outcar
+    from pymatgen.io.vasp.outputs import Vasprun
+
+    data = []
+    for subdir, dirs, files in os.walk(workdir):
+        for file in files:
+            if file.endswith('OUTCAR'):
+                try:
+                    print(subdir.replace(workdir, ''))
+                    file_ou = Outcar(subdir + '/OUTCAR')
+                    file_pos = Structure.from_file(subdir + '/POSCAR')
+                    file_vr = Vasprun(subdir + '/vasprun.xml')
+
+                    # Add things to a list
+                    data.append([subdir.replace(workdir, ''), file_pos.composition, file_pos.composition.num_atoms,
+                                 file_ou.final_energy, file_ou.final_energy / file_pos.composition.num_atoms,
+                                 file_vr.converged])
+                except:
+                    data.append([subdir.replace(workdir, ''), file_pos.composition, file_pos.composition.num_atoms,
+                                 file_ou.final_energy, file_ou.final_energy / file_pos.composition.num_atoms, '!!!',
+                                 'FLAG RAISED'])
+                    print(
+                        'STUPID ERROR - pymatgen doesnt like your outcar or vasprun ??? - Are all jobs complete?')
+                    pass
+
+    data = sorted(data, key=itemgetter(0))
+    TITLE = ['FOLDER NAME', 'COMPOSITION', 'NO. ATOMS', 'TOTAL ENERGY', 'ENERGY / ATOM', 'CHECK_CONV RESULT', 'FLAGS?']
+    data = [[TITLE], data]
+    data = [item for sublist in data for item in sublist]
+    datadf = pd.DataFrame(data)
+    writer = pd.ExcelWriter(workdir + '/TABSFROMRUNS.xlsx')
+    datadf.to_excel(writer)
+    writer.save()
+
+
+def slabsets(inputfile, outputdir, plane2cut, vacmin=5, vacmax=15, numberoflayers=6):
+    # Plane to cut should be in pymatgen format miller planes - [A, B ,C] otherthan that it basically calls on pymatgen
+    # to do the work
+    import os.path
+
+    import pymatgen
+    from pymatgen.core.structure import Structure
+    from pymatgen.core.surface import SlabGenerator
+    from pymatgen.io.cif import CifWriter
+
+    slices_string = ''.join(str(e) for e in plane2cut)
+
+    if vacmax == vacmin:
+        vac = []
+        vac = [vacmin]
+    else:
+        vac = [None] * 5
+        vacrange = ((vacmax - vacmin) / 3)
+        vac[0] = 0
+        vac[1] = round(vacmin)
+        vac[2] = round(vac[1] + vacrange)
+        vac[3] = round(vac[2] + vacrange)
+        vac[4] = round(vacmax)
+
+    struc = Structure.from_file(inputfile)
+    for vacsize in vac:
+        slabgen = SlabGenerator(struc, plane2cut, numberoflayers, vacsize, center_slab=True, in_unit_planes=True)
+        all_slabs = slabgen.get_slabs()
+        CIF = pymatgen.io.cif.CifWriter(all_slabs[0], symprec=1e-4)
+        os.makedirs(outputdir + '/' + slices_string + 'vac' + str(vacsize), exist_ok=True)
+        CIF.write_file(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '.cif')
+        strucs = Structure.from_file(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '.cif')
+        strucs.to(filename=(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '/POSCAR'))
