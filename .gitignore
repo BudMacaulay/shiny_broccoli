@@ -1,1 +1,4 @@
 /.idea/
+/blah.py
+/.ipynb_checkpoints/
+/__pycache__/

@@ -3,6 +3,7 @@
 # # #
 # # #
 import os
+import shutil
 
 
 def possypot(workdir, potcardir):
@@ -106,3 +107,10 @@ def possyinc(workdir, initialincarfile):
                 incar_write = '\n'.join(incar_lofl)
                 with open(subdir + '/INCAR', 'w') as outterfile:
                     outterfile.write(incar_write)
+
+
+def kpointer(workdir, kpointfile):
+    for subdir, dirs, files in os.walk(workdir):
+        for file in files:
+            if file.endswith('POSCAR'):
+                shutil.copy2(kpointfile, subdir)
