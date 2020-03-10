@@ -3,6 +3,7 @@
 import os
 import shutil
 import datetime
+import numpy as np
 
 
 def possypot(workdir, potcardir):
@@ -189,3 +190,53 @@ def slabsets(inputfile, outputdir, plane2cut, vacmin=5, vacmax=15, numberoflayer
         CIF.write_file(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '.cif')
         strucs = Structure.from_file(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '.cif')
         strucs.to(filename=(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '/POSCAR'))
+
+
+def dyna(inputfile, surfaceorbulk, layersrelaxed=3):
+    from pymatgen.io.vasp.inputs import Poscar
+    from pymatgen import Structure
+
+    obby = Structure.from_file(inputfile)
+
+    if surfaceorbulk == 'surface':
+        print(' okay will dyn' + layersrelaxed + ' surface layers on either side')
+        subspos = []
+        for n__ in range(0, len(obby)):  # pretty much cpaste from the subs stuff above
+            subspos.append(n__)
+        eucdis = []
+        for n__ in subspos:  # array-tiest the results of which is closest to center.
+            eucdis = np.append(eucdis, [np.linalg.norm(np.array(0.5) - obby.frac_coords[n__][2]), n__])
+
+        eucdis = np.reshape(eucdis, (len(subspos), 2))  # restruc into a x2 array
+        eucdis = eucdis[eucdis[:, 0].argsort()]  # make the array measure based on c distance from center
+
+        tol = 0.01  # This variable needs some fiddling and could be maybe user defined
+        # TODO - need to fiddle with this cause as of current the 'stepping process is fucked and may think all 1 layer
+        v = 0
+        k = 0
+        lofleucdis = [[]]
+        while v < len(eucdis[:, 1]) - 1:
+            if np.isclose(eucdis[v], eucdis[v + 1], atol=tol)[0]:
+                print(str(eucdis[v][0]) + ' is near ' + str(eucdis[v + 1][0]))
+                lofleucdis[k].append(eucdis[v][1])
+            else:
+                # print(str(eucdis[v][0]) + ' is not near ' + str(eucdis[v + 1][0]))
+                lofleucdis.append([])
+                k += 1
+            v += 1
+        boolatoms = []
+        booldyn = np.ones([len(obby), 3])  # Premaking the boolean input
+        for elem in range(0, int(layersrelaxed) - 1):  # Takes the surface layers as defined
+            boolatoms = boolatoms + lofleucdis[elem]
+        for elem in boolatoms:
+            booldyn[int(elem)] = [0, 0, 0]
+        boollist = booldyn.tolist()  # Convert to list
+        possy = Poscar(obby, selective_dynamics=boollist)  # write as poscar structure
+        possy.structure.to(filename=inputfile)
+    else:
+        print('okay bulk system found will relax all atoms')
+        booldyn = np.ones([len(obby), 3])  # makes an array of 1's
+        boollist = booldyn.tolist()  # for some reason p.m.g doesnt accept np.arrays - weird!
+        possy = Poscar(obby, selective_dynamics=boollist)
+        possy.structure.to(filename=inputfile)
+    print("your input poscar has been updated - dynamic - sorry if this isn't what you wanted </3")
