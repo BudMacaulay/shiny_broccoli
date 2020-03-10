@@ -254,7 +254,7 @@ if input('do you desire incars for all folders? y/n') == 'y':
 
     for subdir, dirs, files in os.walk(workdir):
         for file in files:
-            if file.endswith('SCAR'):
+            if file.endswith('POSCAR'):
                 # print(os.path.join(subdir, file))
                 f = open(os.path.join(subdir, file))
                 liz = []

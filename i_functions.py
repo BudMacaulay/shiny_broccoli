@@ -29,10 +29,9 @@ def possypot(workdir, potcardir):
                                 outfile.write(line)
 
 
-
 def possyinc(workdir, initialincarfile):
     #### Need to change the current handling of these fuckers into a damn json file. As of current i'm just finding
-    #parameters that are incar required and adding them by hand
+    # parameters that are incar required and adding them by hand
     useratoms = 'Li Ni Mn Co O'.split()
     useratoms_mag = '0.0 1.0 1.0 1.0 0.0'.split()
     useratoms_ul = '-1 2 2 2 -1'.split()
@@ -107,4 +106,3 @@ def possyinc(workdir, initialincarfile):
                 incar_write = '\n'.join(incar_lofl)
                 with open(subdir + '/INCAR', 'w') as outterfile:
                     outterfile.write(incar_write)
-
