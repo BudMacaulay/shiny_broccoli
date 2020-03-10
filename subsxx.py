@@ -204,8 +204,6 @@ if yninp == 'y':
 # [NOTE NO FAILSAFE FOR Nonstandard pots] - easily implementable but way too much effort
 # Second NOTE - will always iterate over your crap, be careful putting your starting directory in the crap
 # i should functionalise this too
-# TODO - FIGURE OUT THE WEIRD 9.6blahblahblah bug - its new and this code hasnt changed - FIXED IT - - seems like *SCAR
-#  allows DOSCARS TO BE READ LOL
 
 for subdir, dirs, files in os.walk(workdir):
     for file in files:
