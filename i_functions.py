@@ -240,3 +240,42 @@ def dyna(inputfile, surfaceorbulk, layersrelaxed=3):
         possy = Poscar(obby, selective_dynamics=boollist)
         possy.structure.to(filename=inputfile)
     print("your input poscar has been updated - dynamic - sorry if this isn't what you wanted </3")
+
+### TEST THIS extensively - it looks a little funky
+def qscript2folder(workdir, qscriptdirectory, desiredcluster='iridis5', optionalargs=None):
+    import json
+    from pymatgen.io.vasp import Poscar
+    import math
+
+    if optionalargs == None:
+        print('no optional args')
+
+    atomspercore = 1
+
+    with open(qscriptdirectory + '/' + str(desiredcluster) + '.json') as f:
+        clusterstuff = json.load(f)
+
+    print(clusterstuff['hostname'] + ' wanted')
+    with open(qscriptdirectory + '/' + 'qscript_' + clusterstuff["submissiontype"], 'r') as infile:
+        for subdir, dirs, files in os.walk(workdir):
+            for file in files:
+                if file.endswith('POSCAR'):
+                    print(subdir.replace(workdir, ''))  # Printing the current dir
+                    pos = Poscar.from_file(subdir + '/POSCAR')
+                    # Count no. atoms
+                    print(str(sum(pos.natoms)) + ' atoms in poscar')
+                    nodescalled = math.ceil(sum(pos.natoms) / (atomspercore * clusterstuff["corespernode"]))
+                    if nodescalled > clusterstuff["maxnodes"]:
+                        nodescalled = clusterstuff["maxnodes"]
+
+                    qscript_new = [
+                        i.replace("{qs2fcorecount}", str(int(clusterstuff["corespernode"]) * nodescalled)) for i
+                        in infile]
+
+                    qscript_str = ''.join(qscript_new)
+                    # Writing should be here
+                    with open(subdir + '/qscript', 'w') as outterfile:
+                        outterfile.write(qscript_str)
+
+    #Want to make a json with the important information for all clusters
+    #Aswell as a standard qscript for said clusters.
