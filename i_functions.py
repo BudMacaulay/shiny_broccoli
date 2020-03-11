@@ -5,7 +5,93 @@ import shutil
 import datetime
 import numpy as np
 
+### Generate a slabset - useful for convergence testing ###
+def slabsets(inputfile, outputdir, plane2cut, vacmin=5, vacmax=15, numberoflayers=6):
+    # Plane to cut should be in pymatgen format miller planes - [A, B ,C] otherthan that it basically calls on pymatgen
+    # to do the work
+    import os.path
 
+    import pymatgen
+    from pymatgen.core.structure import Structure
+    from pymatgen.core.surface import SlabGenerator
+    from pymatgen.io.cif import CifWriter
+
+    slices_string = ''.join(str(e) for e in plane2cut)
+
+    if vacmax == vacmin:
+        vac = []
+        vac = [vacmin]
+    else:
+        vac = [None] * 5
+        vacrange = ((vacmax - vacmin) / 3)
+        vac[0] = 0
+        vac[1] = round(vacmin)
+        vac[2] = round(vac[1] + vacrange)
+        vac[3] = round(vac[2] + vacrange)
+        vac[4] = round(vacmax)
+
+    struc = Structure.from_file(inputfile)
+    for vacsize in vac:
+        slabgen = SlabGenerator(struc, plane2cut, numberoflayers, vacsize, center_slab=True, in_unit_planes=True)
+        all_slabs = slabgen.get_slabs()
+        CIF = pymatgen.io.cif.CifWriter(all_slabs[0], symprec=1e-4)
+        os.makedirs(outputdir + '/' + slices_string + 'vac' + str(vacsize), exist_ok=True)
+        CIF.write_file(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '.cif')
+        strucs = Structure.from_file(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '.cif')
+        strucs.to(filename=(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '/POSCAR'))
+
+### Check if you want a dynamic system ###
+def dyna(inputfile, surfaceorbulk, layersrelaxed=3):
+    # TODO - This feature may be buggy - as of current the tolerance on the layers is uhhh to be said lightly. someone smarter than me can figure it out
+    from pymatgen.io.vasp.inputs import Poscar
+    from pymatgen import Structure
+
+    obby = Structure.from_file(inputfile)
+
+    if surfaceorbulk == 'surface':
+        print(' okay will dyn' + layersrelaxed + ' surface layers on either side')
+        subspos = []
+        for n__ in range(0, len(obby)):  # pretty much cpaste from the subs stuff above
+            subspos.append(n__)
+        eucdis = []
+        for n__ in subspos:  # array-tiest the results of which is closest to center.
+            eucdis = np.append(eucdis, [np.linalg.norm(np.array(0.5) - obby.frac_coords[n__][2]), n__])
+
+        eucdis = np.reshape(eucdis, (len(subspos), 2))  # restruc into a x2 array
+        eucdis = eucdis[eucdis[:, 0].argsort()]  # make the array measure based on c distance from center
+
+        tol = 0.01  # This variable needs some fiddling and could be maybe user defined
+        # TODO - need to fiddle with this cause as of current the 'stepping process is fucked and may think all 1 layer
+        v = 0
+        k = 0
+        lofleucdis = [[]]
+        while v < len(eucdis[:, 1]) - 1:
+            if np.isclose(eucdis[v], eucdis[v + 1], atol=tol)[0]:
+                print(str(eucdis[v][0]) + ' is near ' + str(eucdis[v + 1][0]))
+                lofleucdis[k].append(eucdis[v][1])
+            else:
+                # print(str(eucdis[v][0]) + ' is not near ' + str(eucdis[v + 1][0]))
+                lofleucdis.append([])
+                k += 1
+            v += 1
+        boolatoms = []
+        booldyn = np.ones([len(obby), 3])  # Premaking the boolean input
+        for elem in range(0, int(layersrelaxed) - 1):  # Takes the surface layers as defined
+            boolatoms = boolatoms + lofleucdis[elem]
+        for elem in boolatoms:
+            booldyn[int(elem)] = [0, 0, 0]
+        boollist = booldyn.tolist()  # Convert to list
+        possy = Poscar(obby, selective_dynamics=boollist)  # write as poscar structure
+        possy.structure.to(filename=inputfile)
+    else:
+        print('okay bulk system found will relax all atoms')
+        booldyn = np.ones([len(obby), 3])  # makes an array of 1's
+        boollist = booldyn.tolist()  # for some reason p.m.g doesnt accept np.arrays - weird!
+        possy = Poscar(obby, selective_dynamics=boollist)
+        possy.structure.to(filename=inputfile)
+    print("your input poscar has been updated - dynamic - sorry if this isn't what you wanted </3")
+
+### Iterate a 'correct' potcar over all files
 def possypot(workdir, potcardir):
     # # #
     # # #
@@ -29,7 +115,7 @@ def possypot(workdir, potcardir):
                             for line in infile:
                                 outfile.write(line)
 
-
+### Iteratea a standard incar over all files ###
 def pos2inc(workdir, initialincarfile):
     # Need to change the current handling of these fuckers into a damn json file. As of current i'm just finding
     # parameters that are incar required and adding them by hand
@@ -108,7 +194,7 @@ def pos2inc(workdir, initialincarfile):
                 with open(subdir + '/INCAR', 'w') as outterfile:
                     outterfile.write(incar_write)
 
-
+### Iterate a kpoint over all files ###
 def kpointer(workdir, kpointfile):
     for subdir, dirs, files in os.walk(workdir):
         for file in files:
@@ -116,6 +202,61 @@ def kpointer(workdir, kpointfile):
                 shutil.copy2(kpointfile, subdir)
 
 
+### ports a qscript over all directories ###
+def qscript2folder(workdir, qscriptdirectory, desiredcluster='iridis5', atomspercore = 1, optionalargs=None):
+    import json
+    from pymatgen.io.vasp import Poscar
+    import math
+    import re
+
+    if optionalargs == None:
+        print('no optional args - none thought of as of yet')
+
+    f = open(qscriptdirectory + '/' + str(desiredcluster) + '.json')
+    clusterstuff = json.load(f)
+
+    print(clusterstuff['hostname'] + ' wanted')
+    for subdir, dirs, files in os.walk(workdir):
+        for file in files:
+            if file.endswith('POSCAR'):
+                print(subdir.replace(workdir, ''))  # Printing the current dir
+                pos = Poscar.from_file(subdir + '/POSCAR')
+                # Count no. atoms
+                print(str(sum(pos.natoms)) + ' atoms in poscar')
+                nodescalled = math.ceil(sum(pos.natoms) / (atomspercore * clusterstuff["corespernode"]))
+                if nodescalled > clusterstuff["maxnodes"]:
+                    nodescalled = clusterstuff["maxnodes"]
+                infile = open(qscriptdirectory + '/' + 'qscript_' + clusterstuff["submissiontype"], 'r')
+                qscript_new = [i.replace("{qs2fcorecount}", str(int(clusterstuff["corespernode"]) * nodescalled)) for i in infile]
+                qscript_new = [i.replace("{qs2fname}", str(subdir).split('/')[-1]) for i in qscript_new]
+                qscript_str = ''.join(qscript_new)
+                # Writing should be here
+                with open(subdir + '/qscript', 'w') as outterfile:
+                    outterfile.write(qscript_str)
+
+    #Want to make a json with the important information for all clusters
+    #Aswell as a standard qscript for said clusters.
+
+### Tool for andrea sendvasp ###
+def json2folder(workdir, optionalargs=None):
+    import json
+
+    if optionalargs == None:
+        print('no optional args - none thought of as of yet')
+
+    for subdir, dirs, files in os.walk(workdir):
+        for file in files:
+            if file.endswith('qscript'):
+                with open(subdir + '/qscript','r') as f:
+                    jsondata = f.readlines()[1].split('-')
+                if jsondata[0] == '#BUD':
+                    jsonny = {'sub_cmd' :  jsondata[2].strip('\n'), 'hpc_fld' : '~/' + subdir.split('/')[-2], 'hostname' : jsondata[1], 'env_setup' : "~/env.sh"}
+                    with open(subdir + '/local.json', 'w') as outterfile:
+                        json.dump(jsonny, outterfile, indent=4)
+                else:
+                    print('cant determine this is a BUD qscript dying poorly')
+
+### Postprocessing stuff ###
 def tabluateitall(workdir):
     import os
     from operator import itemgetter
@@ -155,127 +296,3 @@ def tabluateitall(workdir):
     writer = pd.ExcelWriter(workdir + '/TABSFROMRUNS.xlsx')
     datadf.to_excel(writer)
     writer.save()
-
-
-def slabsets(inputfile, outputdir, plane2cut, vacmin=5, vacmax=15, numberoflayers=6):
-    # Plane to cut should be in pymatgen format miller planes - [A, B ,C] otherthan that it basically calls on pymatgen
-    # to do the work
-    import os.path
-
-    import pymatgen
-    from pymatgen.core.structure import Structure
-    from pymatgen.core.surface import SlabGenerator
-    from pymatgen.io.cif import CifWriter
-
-    slices_string = ''.join(str(e) for e in plane2cut)
-
-    if vacmax == vacmin:
-        vac = []
-        vac = [vacmin]
-    else:
-        vac = [None] * 5
-        vacrange = ((vacmax - vacmin) / 3)
-        vac[0] = 0
-        vac[1] = round(vacmin)
-        vac[2] = round(vac[1] + vacrange)
-        vac[3] = round(vac[2] + vacrange)
-        vac[4] = round(vacmax)
-
-    struc = Structure.from_file(inputfile)
-    for vacsize in vac:
-        slabgen = SlabGenerator(struc, plane2cut, numberoflayers, vacsize, center_slab=True, in_unit_planes=True)
-        all_slabs = slabgen.get_slabs()
-        CIF = pymatgen.io.cif.CifWriter(all_slabs[0], symprec=1e-4)
-        os.makedirs(outputdir + '/' + slices_string + 'vac' + str(vacsize), exist_ok=True)
-        CIF.write_file(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '.cif')
-        strucs = Structure.from_file(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '.cif')
-        strucs.to(filename=(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '/POSCAR'))
-
-
-def dyna(inputfile, surfaceorbulk, layersrelaxed=3):
-    from pymatgen.io.vasp.inputs import Poscar
-    from pymatgen import Structure
-
-    obby = Structure.from_file(inputfile)
-
-    if surfaceorbulk == 'surface':
-        print(' okay will dyn' + layersrelaxed + ' surface layers on either side')
-        subspos = []
-        for n__ in range(0, len(obby)):  # pretty much cpaste from the subs stuff above
-            subspos.append(n__)
-        eucdis = []
-        for n__ in subspos:  # array-tiest the results of which is closest to center.
-            eucdis = np.append(eucdis, [np.linalg.norm(np.array(0.5) - obby.frac_coords[n__][2]), n__])
-
-        eucdis = np.reshape(eucdis, (len(subspos), 2))  # restruc into a x2 array
-        eucdis = eucdis[eucdis[:, 0].argsort()]  # make the array measure based on c distance from center
-
-        tol = 0.01  # This variable needs some fiddling and could be maybe user defined
-        # TODO - need to fiddle with this cause as of current the 'stepping process is fucked and may think all 1 layer
-        v = 0
-        k = 0
-        lofleucdis = [[]]
-        while v < len(eucdis[:, 1]) - 1:
-            if np.isclose(eucdis[v], eucdis[v + 1], atol=tol)[0]:
-                print(str(eucdis[v][0]) + ' is near ' + str(eucdis[v + 1][0]))
-                lofleucdis[k].append(eucdis[v][1])
-            else:
-                # print(str(eucdis[v][0]) + ' is not near ' + str(eucdis[v + 1][0]))
-                lofleucdis.append([])
-                k += 1
-            v += 1
-        boolatoms = []
-        booldyn = np.ones([len(obby), 3])  # Premaking the boolean input
-        for elem in range(0, int(layersrelaxed) - 1):  # Takes the surface layers as defined
-            boolatoms = boolatoms + lofleucdis[elem]
-        for elem in boolatoms:
-            booldyn[int(elem)] = [0, 0, 0]
-        boollist = booldyn.tolist()  # Convert to list
-        possy = Poscar(obby, selective_dynamics=boollist)  # write as poscar structure
-        possy.structure.to(filename=inputfile)
-    else:
-        print('okay bulk system found will relax all atoms')
-        booldyn = np.ones([len(obby), 3])  # makes an array of 1's
-        boollist = booldyn.tolist()  # for some reason p.m.g doesnt accept np.arrays - weird!
-        possy = Poscar(obby, selective_dynamics=boollist)
-        possy.structure.to(filename=inputfile)
-    print("your input poscar has been updated - dynamic - sorry if this isn't what you wanted </3")
-
-### TEST THIS extensively - it looks a little funky
-def qscript2folder(workdir, qscriptdirectory, desiredcluster='iridis5', optionalargs=None):
-    import json
-    from pymatgen.io.vasp import Poscar
-    import math
-
-    if optionalargs == None:
-        print('no optional args')
-
-    atomspercore = 1
-
-    with open(qscriptdirectory + '/' + str(desiredcluster) + '.json') as f:
-        clusterstuff = json.load(f)
-
-    print(clusterstuff['hostname'] + ' wanted')
-    with open(qscriptdirectory + '/' + 'qscript_' + clusterstuff["submissiontype"], 'r') as infile:
-        for subdir, dirs, files in os.walk(workdir):
-            for file in files:
-                if file.endswith('POSCAR'):
-                    print(subdir.replace(workdir, ''))  # Printing the current dir
-                    pos = Poscar.from_file(subdir + '/POSCAR')
-                    # Count no. atoms
-                    print(str(sum(pos.natoms)) + ' atoms in poscar')
-                    nodescalled = math.ceil(sum(pos.natoms) / (atomspercore * clusterstuff["corespernode"]))
-                    if nodescalled > clusterstuff["maxnodes"]:
-                        nodescalled = clusterstuff["maxnodes"]
-
-                    qscript_new = [
-                        i.replace("{qs2fcorecount}", str(int(clusterstuff["corespernode"]) * nodescalled)) for i
-                        in infile]
-
-                    qscript_str = ''.join(qscript_new)
-                    # Writing should be here
-                    with open(subdir + '/qscript', 'w') as outterfile:
-                        outterfile.write(qscript_str)
-
-    #Want to make a json with the important information for all clusters
-    #Aswell as a standard qscript for said clusters.
