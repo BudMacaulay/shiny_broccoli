@@ -287,24 +287,23 @@ def tabluateitall(workdir):
     from pymatgen import Structure
     from pymatgen.io.vasp.outputs import Outcar
     from pymatgen.io.vasp.outputs import Vasprun
-
+    import time
     data = []
     for subdir, dirs, files in os.walk(workdir):
         for file in files:
             if file.endswith('OUTCAR'):
                 try:
                     print(subdir.replace(workdir, ''))
-                    file_ou = Outcar(subdir + '/OUTCAR')
                     file_pos = Structure.from_file(subdir + '/POSCAR')
                     file_vr = Vasprun(subdir + '/vasprun.xml')
 
                     # Add things to a list
                     data.append([subdir.replace(workdir, ''), file_pos.composition, file_pos.composition.num_atoms,
-                                 file_ou.final_energy, file_ou.final_energy / file_pos.composition.num_atoms,
+                                 file_vr.final_energy, file_vr.final_energy / file_pos.composition.num_atoms,
                                  file_vr.converged])
                 except:
                     data.append([subdir.replace(workdir, ''), file_pos.composition, file_pos.composition.num_atoms,
-                                 file_ou.final_energy, file_ou.final_energy / file_pos.composition.num_atoms, '!!!',
+                                 file_vr.final_energy, file_vr.final_energy / file_pos.composition.num_atoms, '!!!',
                                  'FLAG RAISED'])
                     print(
                         'STUPID ERROR - pymatgen doesnt like your outcar or vasprun ??? - Are all jobs complete?')
