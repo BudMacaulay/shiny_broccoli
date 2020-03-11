@@ -10,9 +10,11 @@ from pymatgen import Structure
 # My general hatred toward pmg means that please enter compositions as their elemental formula or I may bite a bullet.
 
 # - - - User input stuff - - - #
-# TODO Key note Maybe enter the main system first otherwise it may cry - i'll fix this. Additionally no selectivedyn pls
+# TODO Key note Maybe enter the main system first otherwise it may cry - i'll fix this. Additionally no selectivedyn pls (this seems like a pmg issue)
 # TODO might be wise to make this work for multiple substitutions otherwise bitch be mad and i be crazy.
 # TODO - make it ask for a directory to dump into as of current people will have to dig into it to dump it anywhere. oof
+
+# TODO - Additionally i should functionalise these
 
 # NOTE !!!!  - This program seems to be ridicolously ineffective for large systems. A 20 total site 50:50 split makes
 # roughly 20000 files so yeah. Need to some how consider symmetry but not sure how
