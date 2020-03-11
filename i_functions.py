@@ -1,11 +1,26 @@
 # # # A list of useful functions in my aim to write a more consistant and understandable codebase.
+# TODO - 1. - setting in the kpointit for sparce or dense, could get on that.
+
+# TODO - 2. - setting in the qscript to be variable, and split where it puts systems, (large on ir5), small on michael
+
+# TODO - 3. - setting in the possypot to spit an error if standard potentials dont exist - a task for smarter people
+
+# TODO - 4. - pos2inc could use a lot of work on the overall rules and guidelines for gga, needs a dictionary (ptable)
+#  level of information around magmoms e.t.c
+
+# TODO - 5. - general failsafing in case an idiot is using a program. Would be ideal to fix this crap so if you enter
+#  something ridicolous it doesnt break - a job for the more patient.
+
+# TODO - 6. - better error handling of tabulateitall - as of current vaspruns that are dead are just sorta printed as
+#  error then ignored
 
 import os
 import shutil
 import datetime
 import numpy as np
 
-### Generate a slabset - useful for convergence testing ###
+
+# Generate a slabset - useful for convergence testing #
 def slabsets(inputfile, outputdir, plane2cut, vacmin=5, vacmax=15, numberoflayers=6):
     # Plane to cut should be in pymatgen format miller planes - [A, B ,C] otherthan that it basically calls on pymatgen
     # to do the work
@@ -40,7 +55,8 @@ def slabsets(inputfile, outputdir, plane2cut, vacmin=5, vacmax=15, numberoflayer
         strucs = Structure.from_file(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '.cif')
         strucs.to(filename=(outputdir + '/' + slices_string + 'vac' + str(vacsize) + '/POSCAR'))
 
-### Check if you want a dynamic system ###
+
+# Check if you want a dynamic system #
 def dyna(inputfile, surfaceorbulk, layersrelaxed=3):
     # TODO - This feature may be buggy - as of current the tolerance on the layers is uhhh to be said lightly. someone smarter than me can figure it out
     from pymatgen.io.vasp.inputs import Poscar
@@ -91,7 +107,8 @@ def dyna(inputfile, surfaceorbulk, layersrelaxed=3):
         possy.structure.to(filename=inputfile)
     print("your input poscar has been updated - dynamic - sorry if this isn't what you wanted </3")
 
-### Iterate a 'correct' potcar over all files
+
+# Iterate a 'correct' potcar over all files #
 def possypot(workdir, potcardir):
     # # #
     # # #
@@ -115,7 +132,8 @@ def possypot(workdir, potcardir):
                             for line in infile:
                                 outfile.write(line)
 
-### Iteratea a standard incar over all files ###
+
+# Iteratea a standard incar over all files #
 def pos2inc(workdir, initialincarfile):
     # Need to change the current handling of these fuckers into a damn json file. As of current i'm just finding
     # parameters that are incar required and adding them by hand
@@ -194,7 +212,8 @@ def pos2inc(workdir, initialincarfile):
                 with open(subdir + '/INCAR', 'w') as outterfile:
                     outterfile.write(incar_write)
 
-### Iterate a kpoint over all files ###
+
+# Iterate a kpoint over all files #
 def kpointer(workdir, kpointfile):
     for subdir, dirs, files in os.walk(workdir):
         for file in files:
@@ -202,12 +221,11 @@ def kpointer(workdir, kpointfile):
                 shutil.copy2(kpointfile, subdir)
 
 
-### ports a qscript over all directories ###
-def qscript2folder(workdir, qscriptdirectory, desiredcluster='iridis5', atomspercore = 1, optionalargs=None):
+# ports a qscript over all directories #
+def qscript2folder(workdir, qscriptdirectory, desiredcluster='iridis5', atomspercore=1, optionalargs=None):
     import json
     from pymatgen.io.vasp import Poscar
     import math
-    import re
 
     if optionalargs == None:
         print('no optional args - none thought of as of yet')
@@ -227,36 +245,40 @@ def qscript2folder(workdir, qscriptdirectory, desiredcluster='iridis5', atomsper
                 if nodescalled > clusterstuff["maxnodes"]:
                     nodescalled = clusterstuff["maxnodes"]
                 infile = open(qscriptdirectory + '/' + 'qscript_' + clusterstuff["submissiontype"], 'r')
-                qscript_new = [i.replace("{qs2fcorecount}", str(int(clusterstuff["corespernode"]) * nodescalled)) for i in infile]
+                qscript_new = [i.replace("{qs2fcorecount}", str(int(clusterstuff["corespernode"]) * nodescalled)) for i
+                               in infile]
                 qscript_new = [i.replace("{qs2fname}", str(subdir).split('/')[-1]) for i in qscript_new]
                 qscript_str = ''.join(qscript_new)
                 # Writing should be here
                 with open(subdir + '/qscript', 'w') as outterfile:
                     outterfile.write(qscript_str)
 
-    #Want to make a json with the important information for all clusters
-    #Aswell as a standard qscript for said clusters.
+    # Want to make a json with the important information for all clusters
+    # Aswell as a standard qscript for said clusters.
 
-### Tool for andrea sendvasp ###
+
+# Tool for andrea sendvasp #
 def json2folder(workdir, optionalargs=None):
     import json
 
-    if optionalargs == None:
+    if optionalargs is None:
         print('no optional args - none thought of as of yet')
 
     for subdir, dirs, files in os.walk(workdir):
         for file in files:
             if file.endswith('qscript'):
-                with open(subdir + '/qscript','r') as f:
+                with open(subdir + '/qscript', 'r') as f:
                     jsondata = f.readlines()[1].split('-')
                 if jsondata[0] == '#BUD':
-                    jsonny = {'sub_cmd' :  jsondata[2].strip('\n'), 'hpc_fld' : '~/' + subdir.split('/')[-2], 'hostname' : jsondata[1], 'env_setup' : "~/env.sh"}
+                    jsonny = {'sub_cmd': jsondata[2].strip('\n'), 'hpc_fld': '~/' + subdir.split('/')[-2],
+                              'hostname': jsondata[1], 'env_setup': "~/env.sh"}
                     with open(subdir + '/local.json', 'w') as outterfile:
                         json.dump(jsonny, outterfile, indent=4)
                 else:
                     print('cant determine this is a BUD qscript dying poorly')
 
-### Postprocessing stuff ###
+
+# Postprocessing stuff #
 def tabluateitall(workdir):
     import os
     from operator import itemgetter
