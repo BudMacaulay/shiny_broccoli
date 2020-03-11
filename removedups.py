@@ -8,9 +8,6 @@ from pymatgen import Structure
 from statistics import mode
 import shutil
 
-### Not sure of computer science stuff and thus therefore am unsure of how i should compare a set of numbers iteratively
-## In terms of memory it seems most ideal to infact do a i and j = i+1 method or something.
-
 # Step 1: #
 ## Open a folder and determine the 'cheapest' method of calculating simularities
 
