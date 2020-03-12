@@ -3,7 +3,6 @@ import json
 import os
 
 import numpy as np
-from pymatgen import Structure
 
 # Shouldnt require my shit to be a composition that seems like too much effort, as long as stio it makes sense it will
 # try to
