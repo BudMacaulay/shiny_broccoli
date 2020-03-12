@@ -20,6 +20,11 @@ import datetime
 import numpy as np
 
 
+# a method for determining layers
+def the_key(tol, val):
+    return val // tol
+
+
 # Generate a slabset - useful for convergence testing #
 def slabsets(inputfile, outputdir, plane2cut, vacmin=5, vacmax=15, numberoflayers=6):
     # Plane to cut should be in pymatgen format miller planes - [A, B ,C] otherthan that it basically calls on pymatgen
@@ -57,8 +62,9 @@ def slabsets(inputfile, outputdir, plane2cut, vacmin=5, vacmax=15, numberoflayer
 
 
 # Check if you want a dynamic system #
-def dyna(inputfile, surfaceorbulk, layersrelaxed=3):
-    # TODO - This feature may be buggy - as of current the tolerance on the layers is uhhh to be said lightly. someone smarter than me can figure it out
+def dyna(inputfile, surfaceorbulk, layersrelaxed=3, tol=0.01):
+    # TODO - This feature may be buggy - as of current the tolerance on the layers is uhhh to be said lightly. someone
+    #  smarter than me can figure it out
     from pymatgen.io.vasp.inputs import Poscar
     from pymatgen import Structure
 
@@ -75,8 +81,6 @@ def dyna(inputfile, surfaceorbulk, layersrelaxed=3):
 
         eucdis = np.reshape(eucdis, (len(subspos), 2))  # restruc into a x2 array
         eucdis = eucdis[eucdis[:, 0].argsort()]  # make the array measure based on c distance from center
-
-        tol = 0.01  # This variable needs some fiddling and could be maybe user defined
         # TODO - need to fiddle with this cause as of current the 'stepping process is fucked and may think all 1 layer
         v = 0
         k = 0
@@ -317,3 +321,6 @@ def tabluateitall(workdir):
     writer = pd.ExcelWriter(workdir + '/TABSFROMRUNS.xlsx')
     datadf.to_excel(writer)
     writer.save()
+
+# slabsets('C:/Users/Bud/Desktop/test/POSCAR', 'C:/Users/Bud/Desktop/test/', [1,0,4],numberoflayers=5)
+# dyna('C:/Users/Bud/Desktop/test/104vac11/POSCAR', surfaceorbulk='surface', layersrelaxed='2', tol=0.006)
