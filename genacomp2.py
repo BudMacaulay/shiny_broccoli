@@ -1,3 +1,9 @@
+import itertools as itt
+import json
+import os
+from pymatgen import Structure
+import numpy as np
+
 # rewriting genacomp below
 def genacomp(initialstructure, species, desired_composition):
     # step 1 - load structure and half it (allows easier symmterisation of surfaces)
@@ -21,8 +27,9 @@ def genacomp(initialstructure, species, desired_composition):
 
     # need to half the listy here
     flat_list = [item for sublist in listy for item in sublist]
-
     listy.pop(3)
+
+    cutstru = []
     for c in flat_list:
         for k in obby:
             if c == k.coords[2]:
