@@ -1,7 +1,7 @@
 import itertools
 import json
 import os
-
+from pymatgen import Structure
 import numpy as np
 
 # Shouldnt require my shit to be a composition that seems like too much effort, as long as stio it makes sense it will
