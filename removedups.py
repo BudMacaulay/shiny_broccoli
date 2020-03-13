@@ -11,7 +11,7 @@ import shutil
 # Step 1: #
 ## Open a folder and determine the 'cheapest' method of calculating simularities
 
-p = Structure.from_file(filename='/Users/budmacaulay/Desktop/newtestssss/0' + '/POSCAR')
+p = Structure.from_file(filename='/Users/budmacaulay/Desktop/newruns/0' + '/POSCAR')
 # Pretty sure it's more light weight to use dicts and such but im a terrible coder and honestly im painfully lazy
 
 c = collections.Counter(p.species)
@@ -90,13 +90,13 @@ j = 1
 folderlistnew = list(range(0, 679))  ### Length of the whacky backy folders.
 while i < folder - 1:
     disties = []
-    istruc = Structure.from_file(filename='/Users/budmacaulay/Desktop/newtestssss/' + str(i) + '/POSCAR')
+    istruc = Structure.from_file(filename='/Users/budmacaulay/Desktop/newruns/' + str(i) + '/POSCAR')
     for element in istruc:
         if element.specie.name == checkele:
             disties.append(np.linalg.norm(np.array([0.5, 0.5, 0.5]) - element.frac_coords))  # Not strictly true
     while j < folder:
         testies = []
-        jstruc = Structure.from_file(filename='/Users/budmacaulay/Desktop/newtestssss/' + str(j) + '/POSCAR')
+        jstruc = Structure.from_file(filename='/Users/budmacaulay/Desktop/newruns/' + str(j) + '/POSCAR')
         for element in jstruc:
             if element.specie.name == checkele:
                 testies.append(np.linalg.norm(np.array([0.5, 0.5, 0.5]) - element.frac_coords))
@@ -118,9 +118,9 @@ while i < folder - 1:
 # from here you can use any of the tools to move a json, qscript, kpoints potcar and incar into the directories.
 # Should be pretty cool!
 
-os.makedirs('/Users/budmacaulay/Desktop/newtestssss/removed', exist_ok=True)
+os.makedirs('/Users/budmacaulay/Desktop/newruns/removed', exist_ok=True)
 for folder in folderlistnew:
-    os.makedirs('/Users/budmacaulay/Desktop/newtestssss/removed/' + str(folder), exist_ok=True)
-    shutil.copy2('/Users/budmacaulay/Desktop/newtestssss/' + str(folder) + '/POSCAR', '/Users/budmacaulay/Desktop'
-                                                                                      '/newtestssss/removed/' + str(
+    os.makedirs('/Users/budmacaulay/Desktop/newruns/removed/' + str(folder), exist_ok=True)
+    shutil.copy2('/Users/budmacaulay/Desktop/newruns/' + str(folder) + '/POSCAR', '/Users/budmacaulay/Desktop'
+                                                                                      '/newruns/removed/' + str(
         folder))
