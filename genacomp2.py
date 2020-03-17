@@ -16,18 +16,20 @@ from pymatgen.core.lattice import Lattice
 # As they will be quite cool!
 
 # TODO - functionalise layer finder. Also confer with some people about whether they way i've done it is absolutely insane.
+# TODO - as of current this method produced aLOT less sites for the 5 layer system as it'll also give me every possible
+#  m1m2 composition for my shit.
 
 # Provided pymatgen is consistant in making symmtetrical slabs it really shouldn't be an issue
 
 # rewriting genacomp below
-def genacomp(initialstructure, savedir,A1='Co', A2='Mn', fixspecies='Ni', initallayers=9):
+def genacomp(initialstructure, savedir, A1='Co', A2='Mn', fixspecies='Ni', initiallayers=9):
     # step 1 - load structure and half it (allows easier symmterisation of surfaces)
-    initialstructure = '/Users/budmacaulay/Desktop/RESUBMIT/s104_5lay/sup121Co4Nibulksub/POSCAR'
+    # initialstructure = 'C:/Users/Bud/Desktop/test/104vac11/sup141Co4Mnsurfsub/POSCAR'
     obby = Structure.from_file(initialstructure)
-    A1 = 'Co'
-    A2 = 'Mn'
-    fixspecies = 'Ni'
-    initiallayers = 5
+    # A1 = 'Co'
+    # A2 = 'Mn'
+    # fixspecies = 'Ni'
+    # initiallayers = 5
     cdim = []
     for element in obby:
         cdim.append(element.coords[2])
@@ -100,7 +102,7 @@ def genacomp(initialstructure, savedir,A1='Co', A2='Mn', fixspecies='Ni', inital
         i.species = A1
         changestru.remove(i)
 
-    allset = list(itt.product(["Co", "Mn"], repeat=5))
+    allset = list(itt.product([A1, A2], repeat=metal))
     county = 0
     for combo in allset:
         iterstru = changestru.copy()
@@ -147,8 +149,10 @@ def genacomp(initialstructure, savedir,A1='Co', A2='Mn', fixspecies='Ni', inital
             if element.frac_coords[2] < 0:
                 element.frac_coords[2] = abs(element.frac_coords[2])
         both.sort()
-        os.makedirs(savedir + '/' + A2 + str(combo.count(A2)) + '_' + str(county),exist_ok=True)
-        both.to(filename=(savedir + "/" + A2 + str(combo.count(A2)) + '_' + str(county) + '/POSCAR'))
+        os.makedirs(savedir + '/' + A2 + str(int(both.composition.get(A2))) + '_' + str(county),exist_ok=True)
+        both.to(filename=(savedir + "/" + A2 + str(int(both.composition.get(A2))) + '_' + str(county) + '/POSCAR'))
         county += 1
 
+# genacomp('C:/Users/Bud/Desktop/test/104vac11/sup121Co4Mnbulksub/POSCAR', 'C:/Users/Bud/Desktop/newest', A1='Co', A2='Ni', fixspecies='Mn', initiallayers=5)
+# genacomp('C:/Users/Bud/Desktop/test/104vac11/sup141Co4Mnsurfsub/POSCAR', 'C:/Users/Bud/Desktop/newest2', A1='Co', A2='Ni', fixspecies='Mn', initiallayers=5)
 
