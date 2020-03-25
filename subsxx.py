@@ -6,7 +6,7 @@ import shutil
 import numpy as np
 from pymatgen import Structure
 from pymatgen.io.vasp.inputs import Poscar
-from i_functions import dyna
+# from i_functions import dyna
 
 
 # DONE
@@ -125,7 +125,7 @@ if yninp == 'y':
         sup_str[i] = sup_str[i].replace(']', '')
         sup_str[i] = sup_str[i].replace(' ', '')
         sup_str[i] = sup_str[i].replace(',', '')
-        #os.makedirs(workdir + 'sup' + sup_str[i], exist_ok=True)  # Makes the directories to cram shit into
+        os.makedirs(workdir + 'sup' + sup_str[i], exist_ok=True)  # Makes the directories to cram shit into
         #if userinpsub == 'y':
         #    os.makedirs(workdir + 'sup' + sup_str[i] + str(userinpin) + '4' + str(userinpout) + '/',
         #                exist_ok=True)  # Makes the subs directories
@@ -156,26 +156,6 @@ if yninp == 'y':
 # [NOTE NO FAILSAFE FOR Nonstandard pots] - easily implementable but way too much effort
 # Second NOTE - will always iterate over your crap, be careful putting your starting directory in the crap
 # i should functionalise this too
-
-for subdir, dirs, files in os.walk(workdir):
-    for file in files:
-        if file.endswith('POSCAR'):
-            print(os.path.join(subdir, file))
-            f = open(os.path.join(subdir, file))
-            liz = []
-            for line in f:
-                if len(liz) < 8:
-                    liz.append(line)
-                else:
-                    # print('first 8 read')
-                    break
-            with open(subdir + '/POTCAR', 'w') as outfile:
-                for j in liz[5].split():
-                    with open(  # This should be your potcar directory don't change past n
-                            '/Users/budmacaulay/POT_GGA_PAW_PBE/' + j + '/POTCAR') as infile:
-                        for line in infile:
-                            outfile.write(line)
-
 
 # as of current i can just make it copy a very basic incar with some basic parameters ( GGA OFF / MAGMOM OFF)
 # Looks like the magmom is a cool lil' thing but needs ispin = 2, icharge = 1 - This works :)
