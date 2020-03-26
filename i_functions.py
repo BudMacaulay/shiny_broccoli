@@ -63,12 +63,69 @@ def slabsets(inputfile, outputdir, plane2cut, vacmin=4, vacmax=16, numberoflayer
 
 # TODO figure out how I want this to be defined, it'll be cool to rewrite subsxxx since it sucks quite a bit.
 def supers(inputfile, outputdir, supercelldim):
+    from pymatgen import Structure
+
     if len(supercelldim) == 3:
-        obby = Structure.from_file(userinp1)
+        obby = Structure.from_file(inputfile)
         obby.make_supercell(supercelldim)
-        obby.to(filename=(outputdir + '/sup' + str(supercelldim[0]) + str(supercelldim[1]) + str(supercelldim[2]) + '/POSCAR'))
+        obby.to(filename=(outputdir + '/sup' + str(supercelldim[0]) + str(supercelldim[1]) + str(
+            supercelldim[2]) + '/POSCAR'))
     else:
         print('dimension not found fix this')
+
+    return obby
+
+
+def surfsub(inputfile, subsfor, subswith, outputdir):
+    from pymatgen.core.structure import Structure
+
+    obby = Structure.from_file(inputfile)
+    subspos = []
+    for element in range(0, len(obby)):
+        if obby.species[element].name == subsfor:
+            # print(userinpin + ' @ site' + str(n))
+            subspos.append(element)
+    # find the surface level
+    eucdis = obby.frac_coords[subspos]
+    subspos = np.array([subspos])  # Adding atom positions to this thingy
+    subspos = subspos.T  # rotate this array cause yeah
+    eucdis = np.append(eucdis, subspos, 1)  # Combining
+    eucdis = eucdis[eucdis[:, 2].argsort()]  # Sort the rows 2 implies C
+
+    atswitch_1 = int(eucdis[0][3])  # sets a vari to that atom cause yeah
+    atswitch_2 = int(eucdis[len(eucdis) - 1][3])
+    # Need to just subs this with the other atom which pmg should be able to do
+    obby[atswitch_1] = subswith
+    obby[
+        atswitch_2] = subswith  # Neccessary to ensure the symmetry - makes cross results annoying tho but oh well
+    obby.sort()  # this is neccessary as uhm you might've took a middle thingy
+    os.makedirs(outputdir + 'sup' + str(subsfor) + '4' + str(subswith) + 'surfsub', exist_ok=True)
+    obby.to(filename=(outputdir + 'sup' + str(subsfor) + '4' + str(subswith) + 'surfsub/POSCAR'))
+
+
+def bulksub(inputfile, subsfor, subswith, outputdir):
+    from pymatgen import Structure
+
+    obby = Structure.from_file(inputfile)
+    subspos = []
+    for n__ in range(0, len(obby)):
+        if obby.species[n__].name == subsfor:
+            # print(userinpin + ' @ site' + str(n))
+            subspos.append(n__)
+    eucdis = []
+    for n__ in subspos:  # array-tiest the results of which is closest to center.
+        eucdis = np.append(eucdis, [np.linalg.norm(np.array(0.5) - obby.frac_coords[n__][2]), n__])
+
+    eucdis = np.reshape(eucdis, (len(subspos), 2))  # restruc into a x2 array
+    eucdis = eucdis[eucdis[:, 0].argsort()]  # order said array
+    atswitch = int(eucdis[0][1])  # sets a vari to that atom cause yeah
+
+    # Need to just subs this with the other atom which pmg should be able to do
+    obby[atswitch] = subswith
+    obby.sort()  # this is neccessary as uhm you might've took a middle thingy
+    os.makedirs(outputdir + 'sup' + str(subsfor) + '4' + str(subswith) + 'bulksub', exist_ok=True)
+    obby.to(filename=(outputdir + 'sup' + str(subsfor) + '4' + str(subswith) + 'bulksub/POSCAR'))
+
 
 # Check if you want a dynamic system #
 def dyna(inputfile, surfaceorbulk, layersrelaxed=3, tol=0.01):
