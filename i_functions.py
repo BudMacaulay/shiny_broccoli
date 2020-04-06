@@ -20,7 +20,7 @@ import datetime
 import numpy as np
 
 
-# a method for determining layers
+# bit of math used extensively in dyn2 and genacomp2 so it was easiest ot put it here.
 def the_key(tol, val):
     return val // tol
 
@@ -62,24 +62,27 @@ def slabsets(inputfile, outputdir, plane2cut, vacmin=4, vacmax=16, numberoflayer
 
 
 # TODO figure out how I want this to be defined, it'll be cool to rewrite subsxxx since it sucks quite a bit.
+# Subs has been roughly rewritten it's cool, you should be able to call bulksub and surfsub seperately now. which is
+# interesting
 def supers(inputfile, outputdir, supercelldim):
     from pymatgen import Structure
+    import os
 
     if len(supercelldim) == 3:
         obby = Structure.from_file(inputfile)
+        os.makedirs(outputdir + '/sup' + str(supercelldim[0]) + str(supercelldim[1]) + str(
+            supercelldim[2]), exist_ok=True)
         obby.make_supercell(supercelldim)
         obby.to(filename=(outputdir + '/sup' + str(supercelldim[0]) + str(supercelldim[1]) + str(
             supercelldim[2]) + '/POSCAR'))
     else:
         print('dimension not found fix this')
-
     return obby
 
-
-def surfsub(inputfile, subsfor, subswith, outputdir):
+def surfsub(inputstructure, subsfor, subswith, outputdir):
     from pymatgen.core.structure import Structure
 
-    obby = Structure.from_file(inputfile)
+    obby = inputstructure
     subspos = []
     for element in range(0, len(obby)):
         if obby.species[element].name == subsfor:
@@ -103,10 +106,10 @@ def surfsub(inputfile, subsfor, subswith, outputdir):
     obby.to(filename=(outputdir + 'sup' + str(subsfor) + '4' + str(subswith) + 'surfsub/POSCAR'))
 
 
-def bulksub(inputfile, subsfor, subswith, outputdir):
+def bulksub(inputstructure, subsfor, subswith, outputdir):
     from pymatgen import Structure
 
-    obby = Structure.from_file(inputfile)
+    obby = inputstructure
     subspos = []
     for n__ in range(0, len(obby)):
         if obby.species[n__].name == subsfor:
@@ -178,6 +181,88 @@ def dyna(inputfile, surfaceorbulk, layersrelaxed=3, tol=0.01):
     print("your input poscar has been updated - dynamic - sorry if this isn't what you wanted </3")
 
 
+# A new method of dynamising your slabs i devised a while ago. It seems quite consistent and bugfree
+# TODO - add somemore testing for this thing. it'll be cool too!
+def dyna2(inputfile, initiallayers, style=0):
+    # TODO - think of a decent way of nonlayer symmetric surfaces (i.e those of 6 layers?)
+
+    # Rewriting the dyna package, with intent to make it more user friendly and whatnot. Simply.
+    # A style of 0 will mean all layers are relaxed (every atom is given a T value)
+    # A style of 1 will (if possible give 1 layer of bulk [2 if even initiallayers]- ideal for toy systems or small systems)
+    # A style of 2 will (if possible give 3 layers of bulk [4 if even initiallayers] - this is probably more than adequate)
+
+    from pymatgen import Structure
+    from pymatgen.io.vasp import Poscar
+    import math
+    import itertools as itt
+    from functools import partial
+    import numpy as np
+    obby = Structure.from_file(inputfile)
+    # Can skip all math if style = 0 as it'll just set all atoms to dynBool=True
+    if style == 0:
+        booldyn = np.ones([len(obby), 3])  # makes an array of 1's
+        boollist = booldyn.tolist()  # for some reason p.m.g doesnt accept np.arrays - weird!
+        possy = Poscar(obby, selective_dynamics=boollist)
+        possy.structure.to(filename=inputfile)
+
+    else:
+        if initiallayers % 2 == 0:
+            print('initiallayers is even')
+            if style == 1:
+                print('style=1 - small bulk')
+                bulklay = 2
+            else:
+                print('style=2 - large bulk')
+                bulklay = 4
+        else:
+            print('initiallayers is odd')
+            if style == 1:
+                print('style=1 - small bulk')
+                bulklay = 1
+            else:
+                print('style=2 - large bulk')
+                bulklay = 3
+
+        c_ = []
+        for element in obby:
+            c_.append(element.coords[2])
+        c_.sort()
+
+        listy = []
+        ranvar = 0.01
+        while len(listy) != initiallayers:
+            listy = [list(g) for k, g in itt.groupby(c_, partial(the_key, ranvar))]
+            ranvar = ranvar * 1.01
+            # print(ranvar)
+
+        print('Assuming that system is symmetric and bulk is central!')
+        relax = int((initiallayers - bulklay) / 2)
+        print('relaxing ' + str(relax) + ' layer on both sides of the slab')
+
+        # list2 = [listy[relax],listy[-relax]]
+        list2 = listy[0:relax]
+        flatlist2 = [item for sublist in list2 for item in sublist]
+        atomrelax = len(flatlist2)
+
+        # Make a bool of 0's and then convert first and last atom relax to 1
+        booldyn = np.zeros([len(obby), 3])
+        booldyn[0:atomrelax] = [1, 1, 1]
+        booldyn[-atomrelax:] = [1, 1, 1]
+        boollist = booldyn.tolist()  # for some reason p.m.g doesnt accept np.arrays - weird!
+
+        # TODO Cause im dumb
+        def cdim(elem):
+            return elem.c
+
+        # Sorting the structure based on c dimension
+        obby.sort(key=cdim)
+
+        # After this write it to the file as of current it's overwriting the input file but w/e i'm lazy
+        possy = Poscar(obby, selective_dynamics=boollist)
+        possy.structure.sort()  # Have to sort it back or potcar is gunna freak out.
+        possy.structure.to(filename=inputfile)
+
+
 # Iterate a 'correct' potcar over all files #
 def possypot(workdir, potcardir):
     # # #
@@ -215,7 +300,8 @@ def pos2inc(workdir, initialincarfile):
 
     useratomstup = tuple(zip(useratoms, useratoms_mag, useratoms_ul, useratoms_uu, useratoms_uj))
 
-    print('currently defined atoms are ' + str(useratoms) + 'if you expect a different species please add it')
+    print('currently defined atoms are ' + str(useratoms) + "if you expect a different species please add it, "
+                                                            "i'm working on a dict")
 
     for subdir, dirs, files in os.walk(workdir):
         for file in files:
@@ -250,7 +336,7 @@ def pos2inc(workdir, initialincarfile):
                             incar_lofl[varry] = 'general: - !auto generated by BSM on ' + str(datetime.datetime.now())
 
                         if incar_lofl[varry].startswith('MAGMOM'):
-                            #print('line ' + str(varry) + 'being updated')
+                            # print('line ' + str(varry) + 'being updated')
                             comptup = tuple(zip(liz[5].split(), liz[6].split()))
                             incar_lofl[varry] = 'MAGMOM = '
                             for k in comptup:
@@ -258,14 +344,14 @@ def pos2inc(workdir, initialincarfile):
                                     if elem[0] == k[0]:
                                         incar_lofl[varry] = incar_lofl[varry] + k[1] + '*' + elem[1] + ' '
                         if incar_lofl[varry].startswith('LDAUL'):
-                            #print('line ' + str(varry) + 'being updated')
+                            # print('line ' + str(varry) + 'being updated')
                             incar_lofl[varry] = 'LDAUL = '
                             for k in comptup:
                                 for elem in useratomstup:
                                     if elem[0] == k[0]:
                                         incar_lofl[varry] = incar_lofl[varry] + elem[2] + ' '
                         if incar_lofl[varry].startswith('LDAUU'):
-                            #print('line ' + str(varry) + 'being updated')
+                            # print('line ' + str(varry) + 'being updated')
                             incar_lofl[varry] = 'LDAUU = '
                             for k in comptup:
                                 for elem in useratomstup:
@@ -355,9 +441,7 @@ def tabluateitall(workdir):
 
     import pandas as pd
     from pymatgen import Structure
-    from pymatgen.io.vasp.outputs import Outcar
     from pymatgen.io.vasp.outputs import Vasprun
-    import time
     data = []
     for subdir, dirs, files in os.walk(workdir):
         for file in files:
@@ -391,3 +475,116 @@ def tabluateitall(workdir):
     writer = pd.ExcelWriter(workdir + '/TABSFROMRUNS.xlsx')
     datadf.to_excel(writer)
     writer.save()
+
+
+# Should somewhat consistantly make onetep ready .dat files. As of current it will take a supplied blank .dat file to use
+# TODO - could interface thise to ask for type of job and make the starting .dat itself but effort...
+# TODO - need to sync with the pt that i've written and from there import hubbard U/magmom variables - largely done...
+# As of current only ldos is the variable function call. It'd be cool to see the starting dat and decide from there
+# whether to include certain parameters but that's effort
+# TODO - may make it read the current incar file and check the ggau values used for hte vaspruns but that seems a little overkill.
+
+def vasp2onetep(workdir, startingdat, outputdir='0', ldos=False):
+    from ase.io import read, write
+    import json
+    import re
+    import os
+    import shutil
+    from pt import pt
+
+    if outputdir == '0':
+        outputdir = workdir
+
+    os.makedirs(outputdir + '/ONETEPRUN', exist_ok=True)  # Make the directory
+    for subdir, dirs, files in os.walk(workdir):
+        for file in files:
+            if file.endswith('POSCAR'):
+                print(os.path.join(subdir))
+                os.makedirs(outputdir + '/ONETEPRUN/' + subdir.replace(workdir, ''), exist_ok=True)
+                # ASE - good at this shit - successfully makes an xyz - pretty nicely perhaps shudda looked at this before.
+                write(outputdir + '/ONETEPRUN/' + subdir.replace(workdir, '') + '/test.xyz',
+                      read(subdir + '/POSCAR'))
+
+                incfile = open(subdir + '/INCAR', 'r') # Grabs the encut from the file. could func this with the dict.
+                for line in incfile:
+                    line.strip().split('/n')
+                    if line.startswith('ENCUT'):
+                        print('INCAR read with\n' + line)
+                        encut = [int(s) for s in line.split() if s.isdigit()]
+
+                latticeblock = ['%BLOCK LATTICE_CART\n', 'ang\n']
+                for i in range(0, 3):
+                    stringer = str(read(subdir + '/POSCAR').cell.T[i])  # lattice dims
+                    for k in (('[', ''), (']', '')):
+                        stringer = stringer.replace(*k)
+                    latticeblock.append('  ' + stringer + '\n')
+                latticeblock.append('%ENDBLOCK LATTICE_CART\n')
+
+                posblock = []
+                testfile = open(outputdir + '/ONETEPRUN/' + subdir.replace(workdir, '') + '/test.xyz', 'r')
+                for line in testfile:
+                    posblock.append(line)
+                posblock.pop(0)  # remove the first two lines they're useless
+                posblock.pop(0)
+                speciesblock = []
+                counter = 0
+                while counter < len(posblock):
+                    speciesblock.append(posblock[counter].split()[0])
+                    counter += 1
+                # turning the species list into a listset
+                potlist = list(set(speciesblock))
+                eleblock = ['%BLOCK SPECIES\n']  # Block species
+                pottyblock = ['%BLOCK SPECIES_POT\n']
+                hubbardblock = ['%BLOCK HUBBARD\n']
+                ldosblock = ['%BLOCK SPECIES_LDOS_GROUPS']
+                # for loop should make the speciesblock, Hubbardblock and the
+                for element in potlist:
+                    print(element)
+                    print(
+                        "using buddy pt for " + pt.get(element).get("name") + " - check your ele exists, if not add it")
+                    ldosblock.append(element) # ldos line. Always made not always put in.
+                    # TODO - replace line below with a join() method - im too lazy
+                    eleblock.append((element + ' ') * 2 + str(pt.get(element).get("number")) + ' ' + str(
+                        pt.get(element).get("ot").get("ngwf_num")) + ' ' + str(
+                        pt.get(element).get("ot").get("ngwf_rad")) + '\n')
+                    # TODO - find an adequate method to define cluster location of pseudos - also should discuss psuedos to use with someone
+                    pottyblock.append(str(element) + ' ' + str(element) + '!Bfiddle\n')
+                    if pt.get(element).get("hubbardu"):
+                        # TODO - implement a method of asking for the type of u values wanted (as of current only cedar is added)
+                        hubbardblock.append('{0} {1} {2} {3} {4} {5}\n'.format(str(element), str(
+                            pt.get(element).get("U").get("cedar").get("Lval")), str(
+                            pt.get(element).get("U").get("cedar").get("Uval")), str(
+                            pt.get(element).get("U").get("cedar").get("Z")), str(
+                            pt.get(element).get("U").get("cedar").get("alpha")), str(
+                            pt.get(element).get("U").get("cedar").get("sigma"))))
+                    else:
+                        print("Hubbard U is off for this element")
+                        hubbardblock.append(str(element) + ' 0 0 0 -10 0 0\n')
+
+
+                pottyblock.append('%ENDBLOCK SPECIES_POT\n')
+                eleblock.append('%ENDBLOCK SPECIES\n')
+                hubbardblock.append('%ENDBLOCK HUBBARD\n')
+                posblock = ['%BLOCK POSITIONS_ABS\n', *posblock, '%ENDBLOCK POSITIONS_ABS\n']
+                ldosblock = ['%ENDBLOCK SPECIES_LDOS_GROUPS']
+
+                dat = []
+                datfile = open(startingdat, 'r')  # open starting dat.
+                for line in datfile:
+                    dat.append(line)
+                counter = 0
+                while counter < len(dat):
+                    if dat[counter].startswith('cutoff_energy'):
+                        dat[counter] = 'cutoff_energy : ' + str(encut[0])
+                    counter += 1
+
+                if ldos:
+                    dat = [dat, '\n', ldosblock]
+
+                newdat = [dat, '\n', eleblock, '\n', pottyblock, '\n', hubbardblock, '\n', latticeblock, '\n', posblock]
+                newdat = [val for sublist in newdat for val in sublist]
+
+                with open(outputdir + '/ONETEPRUN/' + subdir.replace(workdir, '') + '/automade.dat',
+                          'w+') as outfile:
+                    for element in newdat:
+                        outfile.write(element)
