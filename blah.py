@@ -16,8 +16,7 @@ i_functions.kpointer(workdir, '/Users/budmacaulay/Desktop/RESUBMIT/s100_9lay/KPO
 for subdir, dirs, files in os.walk(str(workdir)):
     for file in files:
         if file.endswith('POSCAR'):
-            i_functions.dyna(subdir + '/POSCAR', 'bulk') # This is outdated use below instead
-            i_functions.dyna2(subdir + 'POSCAR', style=)
+            i_functions.dyna(subdir + '/POSCAR', 'bulk')
 
 i_functions.qscript2folder(workdir,'/Users/budmacaulay/Desktop/qscriptsstuff/')
 
