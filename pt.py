@@ -14,6 +14,7 @@
 # of a way off
 
 
+# MagmomV = initial vasp magmoment desired - this is not set up in onetep yet. seems a little finnicky
 import pt_Uval
 import pt_ot
 from pymatgen import Element
@@ -36,6 +37,7 @@ pt = {
         'IE_1': 1312.0,
         'vdw': 120,
 
+        'magmomV': 0,
         'ot':pt_ot.H_ot,
         'pmgdata': Element.H
     },
@@ -59,6 +61,7 @@ pt = {
         'ox_com':0,
         'oxs':0,
 
+        'magmomV': 0,
         'ot': pt_ot.He_ot,
         'pmgdata': Element.He
     },
@@ -200,6 +203,7 @@ pt = {
         'ox_com': -2,
         'oxs': list(range(-2,2)),
 
+        'magmomV': 0.0,
         'ot': pt_ot.O_ot,
         'pmgdata': Element.O
     },
@@ -537,6 +541,7 @@ pt = {
         'ox_com': 4,
         'oxs': list(range(-2, 4)),
 
+        'magmomV': 1.0,
         'ot': pt_ot.d_ot,
         'pmgdata': Element.Ti
     },
@@ -562,6 +567,7 @@ pt = {
         'ox_com': [2, 4, 7],
         'oxs': [-3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7],
 
+        'magmomV': 0,
         'ot': pt_ot.Mn_ot,
         'pmgdata': Element.Mn
     },
@@ -590,7 +596,8 @@ pt = {
         'oxs': [-3, -1, 0, 1, 2, 3, 4, 5],
 
         'ot': pt_ot.Co_ot,
-        'pmgdata': Element.Co
+        'pmgdata': Element.Co,
+        'magmomV': 1,
     },
 
 
@@ -615,6 +622,7 @@ pt = {
         'oxs': [-2, -1, 0, 1, 2, 3, 4],
 
         'ot': pt_ot.Ni_ot,
-        'pmgdata': Element.Ni
+        'pmgdata': Element.Ni,
+        'magmomV': 1.0,
     }
 }
