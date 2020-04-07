@@ -1,15 +1,19 @@
 # # # A list of useful functions in my aim to write a more consistant and understandable codebase.
 # TODO - 1. - setting in the kpointit for sparce or dense, could get on that.
 
+# TODO - V.IMPORTANT -> figure out why pymatgen seems to make surfaces weirdly (thickness switches betwwen ang or layers
+#  seemingly randomly?!)
+
+
 # TODO - 2. - setting in the qscript to be variable, and split where it puts systems, (large on ir5), small on michael
 
 # TODO - 3. - setting in the possypot to spit an error if standard potentials dont exist - a task for smarter people
 
 # TODO - 4. - pos2inc could use a lot of work on the overall rules and guidelines for gga, needs a dictionary (ptable)
-#  level of information around magmoms e.t.c
+#  level of information around magmoms e.t.c  --- should be done-ish
 
-# TODO - 5. - general failsafing in case an idiot is using a program. Would be ideal to fix this crap so if you enter
-#  something ridicolous it doesnt break - a job for the more patient.
+# TODO - 5. - general failsafing in case an idiot is using a program (me 2days after writing it). Would be ideal to fix
+#  this crap so if you enter something ridicolous it doesnt break - a job for the more patient.
 
 # TODO - 6. - better error handling of tabulateitall - as of current vaspruns that are dead are just sorta printed as
 #  error then ignored
@@ -18,11 +22,17 @@ import os
 import shutil
 import datetime
 import numpy as np
+from pt import pt
 
 
 # bit of math used extensively in dyn2 and genacomp2 so it was easiest ot put it here.
 def the_key(tol, val):
     return val // tol
+
+
+def vprint(s, verbose=False):
+    if verbose:
+        print(s)
 
 
 # Generate a slabset - useful for convergence testing #
@@ -79,6 +89,7 @@ def supers(inputfile, outputdir, supercelldim):
         print('dimension not found fix this')
     return obby
 
+
 def surfsub(inputstructure, subsfor, subswith, outputdir):
     from pymatgen.core.structure import Structure
 
@@ -130,7 +141,7 @@ def bulksub(inputstructure, subsfor, subswith, outputdir):
     obby.to(filename=(outputdir + 'sup' + str(subsfor) + '4' + str(subswith) + 'bulksub/POSCAR'))
 
 
-# Check if you want a dynamic system #
+# This is obsolete now.
 def dyna(inputfile, surfaceorbulk, layersrelaxed=3, tol=0.01):
     # TODO - This feature may be buggy - as of current the tolerance on the layers is uhhh to be said lightly. someone
     #  smarter than me can figure it out
@@ -183,9 +194,8 @@ def dyna(inputfile, surfaceorbulk, layersrelaxed=3, tol=0.01):
 
 # A new method of dynamising your slabs i devised a while ago. It seems quite consistent and bugfree
 # TODO - add somemore testing for this thing. it'll be cool too!
-def dyna2(inputfile, initiallayers, style=0):
-    # TODO - think of a decent way of nonlayer symmetric surfaces (i.e those of 6 layers?)
-
+# TODO - think of a decent way of nonlayer symmetric surfaces (i.e those of 6 layers?) - this may be done i can't remember
+def dyna2(inputfile, initiallayers, style=0, verbose=True):
     # Rewriting the dyna package, with intent to make it more user friendly and whatnot. Simply.
     # A style of 0 will mean all layers are relaxed (every atom is given a T value)
     # A style of 1 will (if possible give 1 layer of bulk [2 if even initiallayers]- ideal for toy systems or small systems)
@@ -193,34 +203,34 @@ def dyna2(inputfile, initiallayers, style=0):
 
     from pymatgen import Structure
     from pymatgen.io.vasp import Poscar
-    import math
     import itertools as itt
     from functools import partial
     import numpy as np
+
     obby = Structure.from_file(inputfile)
     # Can skip all math if style = 0 as it'll just set all atoms to dynBool=True
     if style == 0:
         booldyn = np.ones([len(obby), 3])  # makes an array of 1's
-        boollist = booldyn.tolist()  # for some reason p.m.g doesnt accept np.arrays - weird!
+        boollist = booldyn.tolist()  # for some reason p.m.g doesnt accept np.arrays - weird! - their docs said they fixed it but it wasn't for me?
         possy = Poscar(obby, selective_dynamics=boollist)
         possy.structure.to(filename=inputfile)
 
     else:
         if initiallayers % 2 == 0:
-            print('initiallayers is even')
+            vprint('initiallayers is even', verbose)
             if style == 1:
-                print('style=1 - small bulk')
+                vprint('style=1 - small bulk', verbose)
                 bulklay = 2
             else:
-                print('style=2 - large bulk')
+                vprint('style=2 - large bulk', verbose)
                 bulklay = 4
         else:
-            print('initiallayers is odd')
+            vprint('initiallayers is odd', verbose)
             if style == 1:
-                print('style=1 - small bulk')
+                vprint('style=1 - small bulk', verbose)
                 bulklay = 1
             else:
-                print('style=2 - large bulk')
+                vprint('style=2 - large bulk', verbose)
                 bulklay = 3
 
         c_ = []
@@ -250,7 +260,7 @@ def dyna2(inputfile, initiallayers, style=0):
         booldyn[-atomrelax:] = [1, 1, 1]
         boollist = booldyn.tolist()  # for some reason p.m.g doesnt accept np.arrays - weird!
 
-        # TODO Cause im dumb
+        # TODO Cause im dumb - Can't remember if this todo was finished and if this func is finished! lets hope so :)
         def cdim(elem):
             return elem.c
 
@@ -264,7 +274,7 @@ def dyna2(inputfile, initiallayers, style=0):
 
 
 # Iterate a 'correct' potcar over all files #
-def possypot(workdir, potcardir):
+def possypot(workdir, potcardir, verbose=False):
     # # #
     # # #
     print('possy to potcar is running')
@@ -272,14 +282,14 @@ def possypot(workdir, potcardir):
     for subdir, dirs, files in os.walk(str(workdir)):
         for file in files:
             if file.endswith('POSCAR'):
-                print(os.path.join(subdir, file))
+                vprint(os.path.join(subdir, file), verbose)
                 f = open(os.path.join(subdir, file))
                 liz = []
                 for line in f:
                     if len(liz) < 8:
                         liz.append(line)
                     else:
-                        # print('first 8 read')
+                        vprint('first 8 read', verbose)
                         break
                 with open(subdir + '/POTCAR', 'w') as outfile:
                     for j in liz[5].split():
@@ -369,7 +379,95 @@ def pos2inc(workdir, initialincarfile):
                     outterfile.write(incar_write)
 
 
-# Iterate a kpoint over all files #
+# pos2inc updated with the intent to actually do some cool things with it. Additionally added a verbose flag (vprint)
+# so people can debug if there is a problem with it. It's w/e -
+
+# TODO - check this is the same as the pos2inc above since i wrote it like today. It should be
+def pos2inc2(workdir, initialincarfile, verbose=False):
+    print("You've called pos2inc2 - a tool to make incars from a poscar file.")
+    print("current defined atoms are stored in the pt.py file - if it's not there feel free to add it")
+    for subdir, dirs, files in os.walk(workdir):
+        for file in files:
+            if file.endswith('POSCAR'):
+
+                f = open(os.path.join(subdir, file))
+                liz = []
+                for line in f:
+                    if len(liz) < 8:
+                        liz.append(line)
+                    else:
+                        break
+
+                vprint(str(len(liz[5].split())) + ' elements found in POSCAR', verbose)
+                vprint('elements are ' + liz[5], verbose)
+
+                elelist = liz[5].split()  # Making the list of elements in the poscar
+                magmomstr = 'MAGMOM = '  # This is the dumbest way to do this but holy lord i'm lazy as hell
+                ldaulstr = 'LDAUL = '
+                ldauustr = 'LDAUU = '
+                ldaujstr = 'LDAUJ = '
+                counter = 0
+                for element in elelist:
+                    if pt.get(element).get('magmomV'):  # Magmom stuff
+                        vprint('yes mag data found for {}'.format(element))
+                        magmomstr = '{0}{1}*{2}.0 '.format(magmomstr, str(liz[6].split()[counter]),
+                                                           str(pt.get(element).get('magmomV')))
+
+                    else:
+                        vprint('no mag data found for {} setting to 0'.format(element))
+                        magmomstr = magmomstr + str(liz[6].split()[counter]) + '*0.0 '
+
+                    if pt.get(element).get('hubbardu'):  # HubbardU stuff
+                        vprint('hubbardU info for {} found'.format(element), verbose)
+                        ldaulstr = ldaulstr + str(pt.get(element).get('U').get('cedar').get('Lval')) + ' '
+                        ldauustr = ldauustr + str(pt.get(element).get('U').get('cedar').get('Uval')) + ' '
+                        ldaujstr = ldaujstr + str(pt.get(element).get('U').get('cedar').get('Jval')) + ' '
+                    else:
+                        vprint('no hubbard U info for {} found assuming no hubbard U needed'.format(element), verbose)
+                        ldaulstr = ldaulstr + '-1 '
+                        ldauustr = ldauustr + '0.00 '
+                        ldaujstr = ldaujstr + '0.00 '
+                    counter += 1
+                with open(str(initialincarfile)) as infile:
+                    inc_1 = 0
+                    incar_lofl = [[]]
+                    for line in infile:
+                        if line == '\n':
+                            incar_lofl[inc_1].append('\n')
+                            incar_lofl.append([])
+                            inc_1 += 1
+                        else:
+                            incar_lofl[inc_1].append(line)
+                    incar_lofl = [x for x in incar_lofl if x != []]
+                    incar_lofl = [item for sublist in incar_lofl for item in sublist if
+                                  not item.startswith('!')]
+                    incar_lofl = [x.strip() for x in incar_lofl]
+
+                    counter = 0
+                    while counter < len(incar_lofl):
+                        if incar_lofl[counter].startswith('gen'):  # Puts a date of creation on the header line.
+                            incar_lofl[counter] = 'general: - !auto generated by BSM on ' + str(datetime.datetime.now())
+                            # From here on out, it'll check if you have these flags in your initial incar and update
+                            # them to match the specified info for the element. It only does lda and magmom atm :)
+                        if incar_lofl[counter].startswith('MAGMOM'):
+                            vprint('line ' + str(counter) + 'being updated', verbose)
+                            incar_lofl[counter] = magmomstr
+                        if incar_lofl[counter].startswith('LDAUL'):
+                            vprint('line ' + str(counter) + 'being updated', verbose)
+                            incar_lofl[counter] = ldaulstr
+                        if incar_lofl[counter].startswith('LDAUU'):
+                            vprint('line ' + str(counter) + 'being updated', verbose)
+                            incar_lofl[counter] = ldauustr
+                        if incar_lofl[counter].startswith('LDAUJ'):
+                            incar_lofl[counter] = ldaujstr
+                        counter += 1
+                incar_write = '\n'.join(incar_lofl)  # restring it
+                with open(subdir + '/INCAR', 'w') as outterfile:
+                    outterfile.write(incar_write)  # write it
+
+
+# Iterate a kpoint over all files that have a poscar, It's basically for i in * ; cd $i ; cp KPOINT > . ; cd ../ ;
+# sort of thing
 def kpointer(workdir, kpointfile):
     for subdir, dirs, files in os.walk(workdir):
         for file in files:
@@ -377,7 +475,7 @@ def kpointer(workdir, kpointfile):
                 shutil.copy2(kpointfile, subdir)
 
 
-# ports a qscript over all directories #
+# makes a qscript over all directories that have an incar/poscar within a working directory
 def qscript2folder(workdir, qscriptdirectory, desiredcluster='iridis5', atomspercore=1, optionalargs=None):
     import json
     from pymatgen.io.vasp import Poscar
@@ -413,7 +511,7 @@ def qscript2folder(workdir, qscriptdirectory, desiredcluster='iridis5', atomsper
     # Aswell as a standard qscript for said clusters.
 
 
-# Tool for andrea sendvasp #
+# Tool for andrea sendvasp # just makes a simple json over all directories within a working directory
 def json2folder(workdir, optionalargs=None):
     import json
 
@@ -434,7 +532,7 @@ def json2folder(workdir, optionalargs=None):
                     print('cant determine this is a BUD qscript dying poorly')
 
 
-# Postprocessing stuff #
+# Postprocessing stuff # Will just tabulate all data in a working directory
 def tabluateitall(workdir):
     import os
     from operator import itemgetter
@@ -483,7 +581,6 @@ def tabluateitall(workdir):
 # As of current only ldos is the variable function call. It'd be cool to see the starting dat and decide from there
 # whether to include certain parameters but that's effort
 # TODO - may make it read the current incar file and check the ggau values used for hte vaspruns but that seems a little overkill.
-
 def vasp2onetep(workdir, startingdat, outputdir='0', ldos=False):
     from ase.io import read, write
     import json
@@ -505,7 +602,7 @@ def vasp2onetep(workdir, startingdat, outputdir='0', ldos=False):
                 write(outputdir + '/ONETEPRUN/' + subdir.replace(workdir, '') + '/test.xyz',
                       read(subdir + '/POSCAR'))
 
-                incfile = open(subdir + '/INCAR', 'r') # Grabs the encut from the file. could func this with the dict.
+                incfile = open(subdir + '/INCAR', 'r')  # Grabs the encut from the file. could func this with the dict.
                 for line in incfile:
                     line.strip().split('/n')
                     if line.startswith('ENCUT'):
@@ -542,7 +639,7 @@ def vasp2onetep(workdir, startingdat, outputdir='0', ldos=False):
                     print(element)
                     print(
                         "using buddy pt for " + pt.get(element).get("name") + " - check your ele exists, if not add it")
-                    ldosblock.append(element) # ldos line. Always made not always put in.
+                    ldosblock.append(element)  # ldos line. Always made not always put in.
                     # TODO - replace line below with a join() method - im too lazy
                     eleblock.append((element + ' ') * 2 + str(pt.get(element).get("number")) + ' ' + str(
                         pt.get(element).get("ot").get("ngwf_num")) + ' ' + str(
@@ -560,7 +657,6 @@ def vasp2onetep(workdir, startingdat, outputdir='0', ldos=False):
                     else:
                         print("Hubbard U is off for this element")
                         hubbardblock.append(str(element) + ' 0 0 0 -10 0 0\n')
-
 
                 pottyblock.append('%ENDBLOCK SPECIES_POT\n')
                 eleblock.append('%ENDBLOCK SPECIES\n')
