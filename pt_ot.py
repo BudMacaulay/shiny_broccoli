@@ -20,6 +20,11 @@ Li_ot = {
     "ngwf_rad": 6.0
 }
 
+Be_ot = {
+    "ngwf_num": 4,
+    "ngwf_rad": 6.0
+}
+
 O_ot = {
     "ngwf_num": 4,
     "ngwf_rad": 6.0
