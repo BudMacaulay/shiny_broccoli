@@ -5,21 +5,27 @@
 #  it seems cool in conjunction with these systems
 #  Transistion this from a dict to a class, that'll probs be better
 
+# Added pymatgens data to this stuff as it has more detailed information. Under the index 'pmgdata' Pretty sure our
+# sources are the same so overall shouldn't change much it's just an added layer of info i guess
+
 # No U value source for Sc or Ti have been found. Mostly only inputting those from WangMaxischCedar
 # DOI: 10.1103/PhysRevB.73.195107
 # Plan on adding the second lit source of the Aryaes version of U values later for the user to use but that's a bit
 # of a way off
 
 
+# MagmomV = initial vasp magmoment desired - this is not set up in onetep yet. seems a little finnicky
 import pt_Uval
 import pt_ot
+from pymatgen import Element
+
 pt = {
     "H": {
         'number': 1,
         'name': 'Hydrogen',
         'symbol': 'H',
         'eneg': 2.20,
-        'mass': 1.007,
+        'mass': 1.008,
         'eleconf':'1s1',
         'block': 's',
         'group':1,
@@ -31,7 +37,9 @@ pt = {
         'IE_1': 1312.0,
         'vdw': 120,
 
-        'ot':pt_ot.H_ot
+        'magmomV': 0,
+        'ot':pt_ot.H_ot,
+        'pmgdata': Element.H
     },
 
     "He": {
@@ -53,7 +61,9 @@ pt = {
         'ox_com':0,
         'oxs':0,
 
-        'ot': pt_ot.He_ot
+        'magmomV': 0,
+        'ot': pt_ot.He_ot,
+        'pmgdata': Element.He
     },
     "Li": {
         'number': 3,
@@ -75,9 +85,9 @@ pt = {
         'ox_com': 1,
         'oxs': [0, 1],
 
-        'ot': pt_ot.Li_ot
+        'ot': pt_ot.Li_ot,
+        'pmgdata': Element.Li
     },
-
     "Be": {
         'number': 4,
         'name': 'Beryllium',
@@ -121,7 +131,8 @@ pt = {
         'ox_com': 3,
         'oxs': [-5, -1, 0, 1, 2, 3],
 
-        'ot': pt_ot.p_ot
+        'ot': pt_ot.p_ot,
+        'pmgdata': Element.B
     },
 
     "C": {
@@ -144,7 +155,8 @@ pt = {
         'ox_com': [-4, 4],
         'oxs': list(range(-4,4)),
 
-        'ot': pt_ot.p_ot
+        'ot': pt_ot.p_ot,
+        'pmgdata': Element.C
     },
 
     "N": {
@@ -167,7 +179,8 @@ pt = {
         'ox_com': [-3, 3, 5],
         'oxs': list(range(-3, 5)),
 
-        'ot': pt_ot.p_ot
+        'ot': pt_ot.p_ot,
+        'pmgdata': Element.N
     },
 
     "O": {
@@ -190,7 +203,9 @@ pt = {
         'ox_com': -2,
         'oxs': list(range(-2,2)),
 
-        'ot': pt_ot.O_ot
+        'magmomV': 0.0,
+        'ot': pt_ot.O_ot,
+        'pmgdata': Element.O
     },
 
     "F": {
@@ -213,7 +228,8 @@ pt = {
         'ox_com': -1,
         'oxs': -1,
 
-        'ot': pt_ot.p_ot
+        'ot': pt_ot.p_ot,
+        'pmgdata': Element.F,
     },
 
     "Ne": {
@@ -235,7 +251,8 @@ pt = {
         'ox_com': 0,
         'oxs': 0,
 
-        'ot': pt_ot.p_ot
+        'ot': pt_ot.p_ot,
+        'pmgdata': Element.Ne
     },
 
     "Na": {
@@ -258,7 +275,8 @@ pt = {
         'ox_com': 1,
         'oxs': [-1, 1],
 
-        'ot': pt_ot.s_ot
+        'ot': pt_ot.s_ot,
+        'pmgdata': Element.Na
     },
 
     "Mg": {
@@ -281,7 +299,8 @@ pt = {
         'ox_com': 1,
         'oxs': [-1, 1],
 
-        'ot': pt_ot.s_ot
+        'ot': pt_ot.s_ot,
+        'pmgdata': Element.Mg
     },
 
     "Al": {
@@ -304,7 +323,8 @@ pt = {
         'ox_com': +3,
         'oxs': [-2, -1, 1, 2, 3],
 
-        'ot': pt_ot.p_ot
+        'ot': pt_ot.p_ot,
+        'pmgdata': Element.Al
     },
 
     "Si": {
@@ -327,7 +347,8 @@ pt = {
         'ox_com': [-4,4],
         'oxs': list(range(-4, 4)),
 
-        'ot': pt_ot.p_ot
+        'ot': pt_ot.p_ot,
+        'pmgdata': Element.Si
     },
 
     "P": {
@@ -350,7 +371,8 @@ pt = {
         'ox_com': [-3, 3, 5],
         'oxs': list(range(-3, 5)),
 
-        'ot': pt_ot.p_ot
+        'ot': pt_ot.p_ot,
+        'pmgdata': Element.P
     },
 
     "S": {
@@ -373,7 +395,8 @@ pt = {
         'ox_com': [-2, 2, 4, 6],
         'oxs': list(range(-2, 6)),
 
-        'ot': pt_ot.p_ot
+        'ot': pt_ot.p_ot,
+        'pmgdata': Element.S
     },
 
     "Cl": {
@@ -396,7 +419,8 @@ pt = {
         'ox_com': [-1, 1, 3, 5, 7],
         'oxs': [-1] + list(range(1, 7)),
 
-        'ot': pt_ot.p_ot
+        'ot': pt_ot.p_ot,
+        'pmgdata': Element.Cl
     },
 
     "Ar": {
@@ -418,7 +442,8 @@ pt = {
         'ox_com': 0,
         'oxs': 0,
 
-        'ot': pt_ot.p_ot
+        'ot': pt_ot.p_ot,
+        'pmgdata': Element.Ar
     },
 
     "K": {
@@ -441,7 +466,8 @@ pt = {
         'ox_com': 1,
         'oxs': [-1, 1],
 
-        'ot': pt_ot.s_ot
+        'ot': pt_ot.s_ot,
+        'pmgdata': Element.K
     },
 
     "Ca": {
@@ -464,7 +490,8 @@ pt = {
         'ox_com': 2,
         'oxs': [1, 2],
 
-        'ot': pt_ot.s_ot
+        'ot': pt_ot.s_ot,
+        'pmgdata': Element.Ca
     },
 
     ### Important ones below - Have Uvalues so must do stuff
@@ -490,7 +517,8 @@ pt = {
         'ox_com': 3,
         'oxs': list(range(0, 3)),
 
-        'ot': pt_ot.d_ot
+        'ot': pt_ot.d_ot,
+        'pmgdata': Element.Sc
     },
 
     "Ti": {
@@ -513,7 +541,9 @@ pt = {
         'ox_com': 4,
         'oxs': list(range(-2, 4)),
 
-        'ot': pt_ot.d_ot
+        'magmomV': 1.0,
+        'ot': pt_ot.d_ot,
+        'pmgdata': Element.Ti
     },
 
     # Actual values here (1,2 skip a few only do my ones :). If you want to put yours in do yours. I'm lazy)
@@ -537,7 +567,9 @@ pt = {
         'ox_com': [2, 4, 7],
         'oxs': [-3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7],
 
-        'ot': pt_ot.Mn_ot
+        'magmomV': 0,
+        'ot': pt_ot.Mn_ot,
+        'pmgdata': Element.Mn
     },
 
     "Fe": {},
@@ -563,7 +595,9 @@ pt = {
         'ox_com': [2, 3],
         'oxs': [-3, -1, 0, 1, 2, 3, 4, 5],
 
-        'ot': pt_ot.Co_ot
+        'ot': pt_ot.Co_ot,
+        'pmgdata': Element.Co,
+        'magmomV': 1,
     },
 
 
@@ -587,6 +621,8 @@ pt = {
         'ox_com': 2,
         'oxs': [-2, -1, 0, 1, 2, 3, 4],
 
-        'ot': pt_ot.Ni_ot
+        'ot': pt_ot.Ni_ot,
+        'pmgdata': Element.Ni,
+        'magmomV': 1.0,
     }
 }
